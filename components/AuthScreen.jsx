@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { LogIn, UserPlus, ShieldCheck, Mail, Lock, ArrowLeft, RefreshCw, Link2, Sparkles } from "lucide-react";
+import { LogIn, UserPlus, ShieldCheck, Mail, Lock, ArrowLeft, RefreshCw, Link2, Sparkles, KeyRound } from "lucide-react";
 import { T, STR, APP_BG } from "../lib/theme";
 import { LangToggle, Aurora } from "./shared";
 
@@ -17,6 +17,7 @@ export default function AuthScreen({ lang, setLang, auth }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [newPassword, setNewPassword] = useState(""); // for the reset step
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [showPasteLink, setShowPasteLink] = useState(false);
   const [pasteLink, setPasteLink] = useState("");
@@ -37,11 +38,11 @@ export default function AuthScreen({ lang, setLang, auth }) {
 
   const reset = (nextTab) => {
     setTab(nextTab); setStep("form"); setError(""); setInfo("");
-    setPassword(""); setConfirm(""); setOtp(["", "", "", "", "", ""]);
+    setPassword(""); setConfirm(""); setNewPassword(""); setOtp(["", "", "", "", "", ""]);
     setShowPasteLink(false); setPasteLink("");
   };
 
-  // ── LOGIN / SIGNUP submit ──
+  // ── LOG IN (password) / SIGN UP (password + email OTP confirmation) ──
   const submitForm = async () => {
     setError(""); setInfo("");
     if (!emailOk(email)) { setError(t.emailInvalid); return; }
@@ -58,13 +59,45 @@ export default function AuthScreen({ lang, setLang, auth }) {
         const { error: e, needsVerification } = await auth.signUp(email.trim(), password);
         if (e) { setError(e.message || t.authError); }
         else if (needsVerification) { setStep("verify"); setCooldown(45); setInfo(""); }
-        // if no verification needed, session is live → screen swaps out.
+        // if confirmation is off, session is live → screen swaps out.
       }
     } catch {
       setError(t.authError);
     } finally {
       setBusy(false);
     }
+  };
+
+  // ── FORGOT PASSWORD ── step "forgot": email the recovery code
+  const submitForgot = async () => {
+    setError(""); setInfo("");
+    if (!emailOk(email)) { setError(t.emailInvalid); return; }
+    setBusy(true);
+    try {
+      const { error: e } = await auth.sendRecovery(email.trim());
+      if (e) setError(e.message || t.authError);
+      else { setStep("reset"); setCooldown(45); setOtp(["", "", "", "", "", ""]); setInfo(t.resetSent); }
+    } catch {
+      setError(t.authError);
+    } finally { setBusy(false); }
+  };
+
+  // step "reset": verify the recovery code, then set the new password
+  const submitReset = async () => {
+    setError(""); setInfo("");
+    const code = otp.join("");
+    if (code.length !== 6) { setError(t.otpInvalid); return; }
+    if (newPassword.length < 6) { setError(t.passwordShort); return; }
+    setBusy(true);
+    try {
+      const { error: vErr } = await auth.verifyRecoveryOtp(email.trim(), code);
+      if (vErr) { setError(t.otpInvalid); setBusy(false); return; }
+      const { error: uErr } = await auth.updatePassword(newPassword);
+      if (uErr) setError(uErr.message || t.authError);
+      // success → user now has a session with the new password → screen swaps out.
+    } catch {
+      setError(t.authError);
+    } finally { setBusy(false); }
   };
 
   // ── OTP verify ──
@@ -87,7 +120,10 @@ export default function AuthScreen({ lang, setLang, auth }) {
     if (cooldown > 0 || busy) return;
     setBusy(true); setError(""); setInfo("");
     try {
-      const { error: e } = await auth.resendOtp(email.trim());
+      // reset step re-sends the recovery code; verify step re-sends the signup code
+      const { error: e } = step === "reset"
+        ? await auth.sendRecovery(email.trim())
+        : await auth.resendOtp(email.trim());
       if (e) setError(e.message || t.authError);
       else { setInfo(t.otpResent); setCooldown(45); }
     } finally { setBusy(false); }
@@ -118,13 +154,14 @@ export default function AuthScreen({ lang, setLang, auth }) {
       const filled = ["", "", "", "", "", ""].map((_, idx) => next[idx] || "");
       setOtp(filled);
       otpRefs.current[Math.min(next.length, 5)]?.focus();
-      if (next.length >= 6) submitOtp(filled);
+      // only auto-submit during signup confirmation; reset waits for the new password
+      if (next.length >= 6 && step === "verify") submitOtp(filled);
       return;
     }
     setOtp((o) => {
       const n = o.map((d, idx) => (idx === i ? digits : d));
       if (i < 5) otpRefs.current[i + 1]?.focus();
-      if (n.join("").length === 6) submitOtp(n);
+      if (n.join("").length === 6 && step === "verify") submitOtp(n);
       return n;
     });
   };
@@ -228,7 +265,10 @@ export default function AuthScreen({ lang, setLang, auth }) {
 
               {tab === "login" && (
                 <div style={{ textAlign: rtl ? "left" : "right", marginTop: 10 }}>
-                  <span style={{ color: T.muted, fontSize: 13, fontWeight: 600 }}>{t.forgotPassword}</span>
+                  <button onClick={() => { setStep("forgot"); setError(""); setInfo(""); }}
+                    style={{ background: "none", border: "none", color: T.muted, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0 }}>
+                    {t.forgotPassword}
+                  </button>
                 </div>
               )}
 
@@ -250,7 +290,7 @@ export default function AuthScreen({ lang, setLang, auth }) {
                 </button>
               </p>
             </>
-          ) : (
+          ) : step === "verify" ? (
             /* ── VERIFY STEP (cross-device OTP) ── */
             <div className="in-fade">
               <button onClick={() => { setStep("form"); setError(""); setInfo(""); }}
@@ -325,6 +365,100 @@ export default function AuthScreen({ lang, setLang, auth }) {
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+          ) : step === "forgot" ? (
+            /* ── FORGOT PASSWORD: request a recovery code ── */
+            <div className="in-fade">
+              <button onClick={() => { setStep("form"); setError(""); setInfo(""); }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none",
+                  color: T.muted, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 14, padding: 0 }}>
+                <ArrowLeft size={15} style={{ transform: rtl ? "scaleX(-1)" : "none" }} /> {t.backToLogin}
+              </button>
+
+              <div style={{ textAlign: "center", marginBottom: 18 }}>
+                <div style={{ display: "inline-flex", width: 64, height: 64, borderRadius: 18, alignItems: "center",
+                  justifyContent: "center", margin: "0 auto 14px",
+                  background: `linear-gradient(135deg, ${T.gold}, ${T.goldDeep})`, boxShadow: `0 12px 34px ${T.goldGlow}` }}>
+                  <KeyRound size={28} color="#0B0E26" />
+                </div>
+                <h2 className="in-display" style={{ margin: 0, fontSize: 23, fontWeight: 800, color: T.text }}>{t.forgotTitle}</h2>
+                <p style={{ margin: "8px 0 0", color: T.muted, fontSize: 13, lineHeight: 1.5 }}>{t.forgotSub}</p>
+              </div>
+
+              <Field icon={Mail} label={t.email}>
+                <input type="email" value={email} dir="ltr" autoComplete="email"
+                  onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
+                  onKeyDown={(e) => { if (e.key === "Enter") submitForgot(); }} style={inp} />
+              </Field>
+
+              <Feedback error={error} info={info} />
+
+              <button onClick={submitForgot} disabled={busy} className="in-btn in-display"
+                style={{ ...cta, marginTop: 18, background: `linear-gradient(90deg, ${T.gold}, ${T.goldDeep})`,
+                  boxShadow: `0 12px 30px ${T.goldGlow}`, opacity: busy ? 0.7 : 1 }}>
+                <RefreshCw size={18} /> {busy ? "…" : t.forgotSend}
+              </button>
+            </div>
+          ) : (
+            /* ── RESET PASSWORD: recovery code + new password ── */
+            <div className="in-fade">
+              <button onClick={() => { setStep("forgot"); setError(""); setInfo(""); }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none",
+                  color: T.muted, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 14, padding: 0 }}>
+                <ArrowLeft size={15} style={{ transform: rtl ? "scaleX(-1)" : "none" }} /> {t.changeEmail}
+              </button>
+
+              <div style={{ textAlign: "center", marginBottom: 18 }}>
+                <div style={{ display: "inline-flex", width: 64, height: 64, borderRadius: 18, alignItems: "center",
+                  justifyContent: "center", margin: "0 auto 14px",
+                  background: `linear-gradient(135deg, ${T.gold}, ${T.goldDeep})`, boxShadow: `0 12px 34px ${T.goldGlow}` }}>
+                  <Lock size={28} color="#0B0E26" />
+                </div>
+                <h2 className="in-display" style={{ margin: 0, fontSize: 23, fontWeight: 800, color: T.text }}>{t.resetTitle}</h2>
+                <p style={{ margin: "8px 0 0", color: T.muted, fontSize: 13, lineHeight: 1.5 }}>
+                  {t.verifySentTo} <strong style={{ color: T.text }} dir="ltr">{email}</strong>
+                </p>
+              </div>
+
+              {/* recovery code */}
+              <div dir="ltr" style={{ display: "flex", gap: 9, justifyContent: "center", marginBottom: 14 }}>
+                {otp.map((d, i) => (
+                  <input key={i} ref={(el) => (otpRefs.current[i] = el)} value={d} inputMode="numeric"
+                    maxLength={1} onChange={(e) => onOtpChange(i, e.target.value)} onKeyDown={(e) => onOtpKey(i, e)}
+                    style={{ width: 46, height: 56, textAlign: "center", fontSize: 24, fontWeight: 800,
+                      fontFamily: "'Changa', sans-serif", color: T.text, background: "rgba(0,0,0,0.3)",
+                      border: `1.5px solid ${d ? T.gold : T.line}`, borderRadius: 13, outline: "none",
+                      boxShadow: d ? `0 0 16px ${T.goldGlow}` : "none", transition: "all .18s ease" }} />
+                ))}
+              </div>
+
+              {/* new password */}
+              <Field icon={Lock} label={t.newPassword}>
+                <input type="password" value={newPassword} dir="ltr" autoComplete="new-password"
+                  onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••"
+                  onKeyDown={(e) => { if (e.key === "Enter") submitReset(); }} style={inp} />
+              </Field>
+              <p style={{ color: T.mutedDeep, fontSize: 12, margin: "8px 2px 0", fontWeight: 600 }}>{t.passwordHint}</p>
+
+              <Feedback error={error} info={info} center />
+
+              <button onClick={submitReset} disabled={busy || otp.join("").length !== 6 || newPassword.length < 6} className="in-btn in-display"
+                style={{ ...cta, marginTop: 16, background: `linear-gradient(90deg, ${T.gold}, ${T.goldDeep})`,
+                  boxShadow: `0 12px 30px ${T.goldGlow}`,
+                  opacity: (busy || otp.join("").length !== 6 || newPassword.length < 6) ? 0.6 : 1,
+                  cursor: (otp.join("").length === 6 && newPassword.length >= 6) ? "pointer" : "not-allowed" }}>
+                <ShieldCheck size={18} /> {busy ? t.verifyingSession : t.resetBtn}
+              </button>
+
+              {/* resend */}
+              <div style={{ textAlign: "center", marginTop: 16 }}>
+                <button onClick={resend} disabled={cooldown > 0 || busy}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "none", border: "none",
+                    color: cooldown > 0 ? T.mutedDeep : T.gold, fontWeight: 700, fontSize: 13.5,
+                    cursor: cooldown > 0 ? "default" : "pointer" }}>
+                  <RefreshCw size={14} /> {cooldown > 0 ? `${t.otpResendIn} ${cooldown}s` : t.otpResend}
+                </button>
               </div>
             </div>
           )}

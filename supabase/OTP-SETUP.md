@@ -37,6 +37,33 @@ make Supabase **email the code** instead of (or alongside) a link.
 - **Paste-link fallback** → if a user only has the link, the app extracts `token_hash` from
   it and calls `verifyOtp({ token_hash, type: "signup" })`.
 
+## Forgot password (6-digit recovery code)
+
+The **Forgot password?** link on the Log In screen runs an OTP-based recovery flow, so the
+user never has to click a device-locked link:
+
+1. **Send code** → `supabase.auth.resetPasswordForEmail(email)` emails a recovery code.
+2. **Reset** → user enters the 6-digit code + a new password. The app calls
+   `supabase.auth.verifyOtp({ email, token, type: "recovery" })` to establish a session,
+   then `supabase.auth.updateUser({ password })` to set the new password. They're signed in.
+
+For the digits to appear in the email, edit **Authentication → Email Templates →
+"Reset Password"** the same way as Confirm signup — include `{{ .Token }}`:
+
+```html
+<h2>Reset your password</h2>
+<p>Your recovery code is:</p>
+<p style="font-size:28px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+<p>Enter this code in the app to set a new password.</p>
+```
+
+(If the template still renders only `{{ .ConfirmationURL }}`, recovery still works via the
+link's token, but the code won't be shown for the in-app 6-box UI.)
+
+> Reminder on the email mechanic: link-vs-code is controlled entirely by the **email
+> template**, not by the API method. Template editing is available even on the default
+> email service — custom SMTP is only needed for higher send limits and your own domain.
+
 ## Optional: shorten code expiry / length
 Under **Authentication → Email** you can adjust OTP expiry. Default 6 digits works out of the box.
 
