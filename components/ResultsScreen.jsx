@@ -1,42 +1,50 @@
 "use client";
-import { Crown, Trophy } from "lucide-react";
-import { T, STR, teamColor, teamColorB } from "../lib/theme";
-import { LangToggle, Confetti } from "./shared";
+import { Crown, Trophy, RotateCcw } from "lucide-react";
+import { T, STR, APP_BG, teamColor, teamColorB } from "../lib/theme";
+import { LangToggle, Confetti, Aurora } from "./shared";
 
 export default function ResultsScreen({ lang, setLang, names, scores, onPlayAgain }) {
   const t = STR[lang];
   const rtl = lang === "ar";
   const win = scores.team1 === scores.team2 ? null : (scores.team1 > scores.team2 ? "team1" : "team2");
   const accent = win ? teamColor[win] : T.gold;
+  const accentB = win ? teamColorB[win] : T.goldDeep;
 
   return (
     <div dir={rtl ? "rtl" : "ltr"} style={shell}>
+      <Aurora />
       {win && <Confetti />}
-      <div className="in-pop" style={{ width: "100%", maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 92, height: 92, borderRadius: 999, marginBottom: 18,
-          background: `linear-gradient(135deg, ${accent}, ${win ? teamColorB[win] : T.goldDeep})`, boxShadow: `0 12px 40px ${accent}55` }}>
-          {win ? <Crown size={46} color="#0B0E26" /> : <Trophy size={44} color="#0B0E26" />}
+      <div className="in-pop" style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 600, margin: "0 auto", textAlign: "center" }}>
+        <div className="timer-urgent" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 104, height: 104, borderRadius: 999, marginBottom: 20,
+          background: `linear-gradient(135deg, ${accent}, ${accentB})`, boxShadow: `0 16px 50px ${accent}66, 0 0 50px ${accent}44` }}>
+          {win ? <Crown size={52} color="#0B0E26" /> : <Trophy size={48} color="#0B0E26" />}
         </div>
-        <div style={{ color: T.muted, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", fontSize: 13 }}>{win ? t.congrats : ""}</div>
-        <h1 className="in-display" style={{ fontSize: 46, fontWeight: 800, margin: "6px 0 4px", color: T.text }}>{win ? names[win] : t.tie}</h1>
-        {win && <div style={{ color: accent, fontWeight: 700, fontSize: 16, marginBottom: 22 }}>{t.winner}</div>}
+        <div style={{ color: accent, fontWeight: 800, letterSpacing: 2.5, textTransform: "uppercase", fontSize: 13 }}>{win ? t.congrats : ""}</div>
+        <h1 className="in-display" style={{ fontSize: 52, fontWeight: 800, margin: "8px 0 4px", color: T.text,
+          textShadow: `0 0 40px ${accent}55` }}>{win ? names[win] : t.tie}</h1>
+        {win && <div style={{ color: accent, fontWeight: 800, fontSize: 17, marginBottom: 24 }}>{t.winner}</div>}
 
-        <div style={{ color: T.muted, fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, margin: "10px 0" }}>{t.finalScore}</div>
-        <div style={{ display: "flex", gap: 14, justifyContent: "center", marginBottom: 28 }}>
+        <div style={{ color: T.muted, fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1.5, margin: "14px 0" }}>{t.finalScore}</div>
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", marginBottom: 32, flexWrap: "wrap" }}>
           {["team1", "team2"].map((k) => (
-            <div key={k} style={{ flex: 1, maxWidth: 200, padding: 18, borderRadius: 18, background: T.panel,
-              border: `1px solid ${win === k ? teamColor[k] : T.line}`, boxShadow: win === k ? `0 0 0 1px ${teamColor[k]}` : "none" }}>
-              <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{names[k]}</div>
-              <div className="in-display" style={{ fontSize: 44, fontWeight: 800, color: teamColor[k], lineHeight: 1 }}>{scores[k]}</div>
+            <div key={k} style={{ flex: "1 1 180px", maxWidth: 220, padding: 22, borderRadius: 22,
+              background: "linear-gradient(180deg, rgba(28,33,80,0.7), rgba(13,16,42,0.85))",
+              border: `1.5px solid ${win === k ? teamColor[k] : T.line}`,
+              boxShadow: win === k ? `0 0 0 1px ${teamColor[k]}, 0 16px 40px ${teamColor[k]}33` : "0 8px 22px rgba(0,0,0,0.3)",
+              opacity: win && win !== k ? 0.7 : 1, transition: "all .3s ease" }}>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{names[k]}</div>
+              <div className="in-display" style={{ fontSize: 50, fontWeight: 800, color: teamColor[k], lineHeight: 1,
+                textShadow: `0 0 28px ${teamColor[k]}55` }}>{scores[k]}</div>
             </div>
           ))}
         </div>
 
-        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           <button onClick={onPlayAgain} className="in-btn in-display"
-            style={{ padding: "14px 26px", fontSize: 17, fontWeight: 800, borderRadius: 14, cursor: "pointer", color: "#0B0E26",
-              background: `linear-gradient(90deg, ${T.t1}, ${T.gold}, ${T.t2})`, border: "none", boxShadow: "0 10px 26px rgba(255,213,107,0.3)" }}>
-            {t.playAgain}
+            style={{ display: "inline-flex", alignItems: "center", gap: 9, padding: "15px 30px", fontSize: 18, fontWeight: 800,
+              borderRadius: 16, cursor: "pointer", color: "#0B0E26",
+              background: `linear-gradient(90deg, ${T.t1}, ${T.gold}, ${T.t2})`, border: "none", boxShadow: "0 14px 34px rgba(255,213,107,0.35)" }}>
+            <RotateCcw size={19} /> {t.playAgain}
           </button>
           <LangToggle lang={lang} setLang={setLang} />
         </div>
@@ -45,5 +53,5 @@ export default function ResultsScreen({ lang, setLang, names, scores, onPlayAgai
   );
 }
 
-const shell = { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "26px 16px", position: "relative",
-  background: `radial-gradient(1100px 600px at 20% -10%, #1B1F4E 0%, transparent 60%), radial-gradient(1000px 600px at 100% 0%, #142a44 0%, transparent 55%), ${T.bg}` };
+const shell = { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "26px 16px",
+  position: "relative", background: APP_BG };

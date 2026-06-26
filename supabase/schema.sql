@@ -99,11 +99,16 @@ create policy "played self" on public.played_questions for all
 --  SEED DATA (starter Question Bank — admins can add more later)
 -- ════════════════════════════════════════════════════════════
 insert into public.categories (name_en, name_ar, icon, sort_order) values
-  ('TV Shows', 'مسلسلات', 'tv',       1),
-  ('Language', 'لغة',     'language', 2),
-  ('Anime',    'أنميات',  'anime',    3),
-  ('Gaming',   'ألعاب',   'gaming',   4),
-  ('Proverbs', 'أمثال',   'proverbs', 5)
+  ('General Knowledge', 'معلومات عامة', 'general',  1),
+  ('TV Shows',          'مسلسلات',     'tv',       2),
+  ('Cinema',            'سينما',       'cinema',   3),
+  ('Sports',            'رياضة',       'sports',   4),
+  ('History',           'تاريخ',       'history',  5),
+  ('Poetry',            'شعر',         'poetry',   6),
+  ('Language',          'لغة',         'language', 7),
+  ('Anime',             'أنميات',      'anime',    8),
+  ('Gaming',            'ألعاب',       'gaming',   9),
+  ('Proverbs',          'أمثال',       'proverbs', 10)
 on conflict do nothing;
 
 -- helper to insert a question by category name

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { STR } from "../lib/theme";
+import { STR, APP_BG } from "../lib/theme";
 import { useAuth } from "../lib/useAuth";
 import { fetchCategories, fetchUnseenQuestions, recordPlayed } from "../lib/api";
 import { buildBoard, cellKey, countPlayableCells } from "../lib/game";
@@ -81,7 +81,13 @@ export default function Page() {
 
   // ── render ──
   if (auth.loading) {
-    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0B0E26", color: "#9698C9" }}>{t.loading}</div>;
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", gap: 18, alignItems: "center", justifyContent: "center", background: APP_BG, color: "#9698C9" }}>
+        <div style={{ width: 46, height: 46, borderRadius: 999, border: "3px solid rgba(255,255,255,0.12)", borderTopColor: "#FFD56B", animation: "spin 0.8s linear infinite" }} />
+        <span style={{ fontWeight: 700, letterSpacing: 1 }}>{t.loading}</span>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
   }
   if (!auth.user) return <AuthScreen lang={lang} setLang={setLang} auth={auth} />;
 

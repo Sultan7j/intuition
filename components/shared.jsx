@@ -3,6 +3,15 @@ import { useMemo } from "react";
 import { Globe } from "lucide-react";
 import { T } from "../lib/theme";
 
+// Drifting neon aurora blobs that sit behind every screen for depth.
+export function Aurora() {
+  return (
+    <div className="in-aurora" aria-hidden="true">
+      <span className="a1" /><span className="a2" /><span className="a3" />
+    </div>
+  );
+}
+
 export function LangToggle({ lang, setLang }) {
   return (
     <button
