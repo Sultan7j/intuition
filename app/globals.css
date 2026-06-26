@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Changa:wght@600;700;800&family=Tajawal:wght@400;500;700;800&display=swap');
+
+:root { color-scheme: dark; }
+
+body {
+  margin: 0;
+  font-family: 'Tajawal', sans-serif;
+  background: #0B0E26;
+  color: #EEF0FF;
+}
+
+.in-display { font-family: 'Changa', sans-serif; letter-spacing: -0.01em; }
+.in-btn { transition: transform .14s ease, box-shadow .2s ease, opacity .2s ease, background .2s ease; }
+.in-btn:hover { transform: translateY(-2px); }
+.in-btn:active { transform: translateY(0); }
+.in-card { transition: transform .16s ease, box-shadow .2s ease, opacity .2s ease, filter .2s ease; }
+.in-card:not(:disabled):hover { transform: translateY(-3px); }
+.in-pop { animation: inpop .26s cubic-bezier(.2,.9,.3,1.2); }
+.in-fade { animation: infade .22s ease; }
+:focus-visible { outline: 2px solid #FFD56B; outline-offset: 2px; border-radius: 8px; }
+input::placeholder, textarea::placeholder { color: #9698C9; opacity: .7; }
+
+@keyframes inpop { from { opacity:0; transform: scale(.92) translateY(8px);} to { opacity:1; transform: scale(1) translateY(0);} }
+@keyframes infade { from { opacity:0;} to { opacity:1;} }
+@keyframes inglow { 0%,100% { opacity:.55;} 50% { opacity:1;} }
+@keyframes inpulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes cfall { 0% { transform: translateY(-30px) rotate(0deg); opacity:1;} 100% { transform: translateY(102vh) rotate(540deg); opacity:1;} }
+
+.timer-urgent { animation: inpulse 1s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .in-btn, .in-card, .timer-urgent { transition: none; animation: none; }
+  .in-btn:hover, .in-card:hover { transform: none; }
+  .in-pop, .in-fade { animation: none; }
+  .cfetti { display: none; }
+}
