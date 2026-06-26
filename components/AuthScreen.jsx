@@ -6,6 +6,14 @@ import { LangToggle, Aurora } from "./shared";
 
 const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((e || "").trim());
 
+// Coerce any error/info value (string OR Error-like object) into a clean,
+// renderable string. Strips empties and junk like "{}" / "[object Object]"
+// so React never receives a raw object as a child.
+const toMsg = (v) => {
+  const s = typeof v === "string" ? v : (v && typeof v === "object" ? v.message : "");
+  return s && s !== "{}" && s !== "[object Object]" ? String(s) : "";
+};
+
 export default function AuthScreen({ lang, setLang, auth }) {
   const t = STR[lang];
   const rtl = lang === "ar";
@@ -53,12 +61,12 @@ export default function AuthScreen({ lang, setLang, auth }) {
     try {
       if (tab === "login") {
         const { error: e } = await auth.signIn(email.trim(), password);
-        if (e) setError(e.message || t.authError);
+        if (e) setError(toMsg(e) || t.authError);
         // success → useAuth's onAuthStateChange swaps the screen out.
       } else {
         const { error: e, needsVerification } = await auth.signUp(email.trim(), password);
-        if (e) { setError(e.message || t.authError); }
-        else if (needsVerification) { setStep("verify"); setCooldown(45); setInfo(""); }
+        if (e) { setError(toMsg(e) || t.authError); }
+        else if (needsVerification) { setStep("verify"); setCooldown(45); setError(""); setInfo(""); }
         // if confirmation is off, session is live → screen swaps out.
       }
     } catch {
@@ -75,7 +83,7 @@ export default function AuthScreen({ lang, setLang, auth }) {
     setBusy(true);
     try {
       const { error: e } = await auth.sendRecovery(email.trim());
-      if (e) setError(e.message || t.authError);
+      if (e) setError(toMsg(e) || t.authError);
       else { setStep("reset"); setCooldown(45); setOtp(["", "", "", "", "", ""]); setInfo(t.resetSent); }
     } catch {
       setError(t.authError);
@@ -93,7 +101,7 @@ export default function AuthScreen({ lang, setLang, auth }) {
       const { error: vErr } = await auth.verifyRecoveryOtp(email.trim(), code);
       if (vErr) { setError(t.otpInvalid); setBusy(false); return; }
       const { error: uErr } = await auth.updatePassword(newPassword);
-      if (uErr) setError(uErr.message || t.authError);
+      if (uErr) setError(toMsg(uErr) || t.authError);
       // success → user now has a session with the new password → screen swaps out.
     } catch {
       setError(t.authError);
@@ -124,7 +132,7 @@ export default function AuthScreen({ lang, setLang, auth }) {
       const { error: e } = step === "reset"
         ? await auth.sendRecovery(email.trim())
         : await auth.resendOtp(email.trim());
-      if (e) setError(e.message || t.authError);
+      if (e) setError(toMsg(e) || t.authError);
       else { setInfo(t.otpResent); setCooldown(45); }
     } finally { setBusy(false); }
   };
@@ -481,11 +489,12 @@ function Field({ icon: Icon, label, top = 0, children }) {
 }
 
 function Feedback({ error, info, center }) {
-  if (!error && !info) return null;
+  const e = toMsg(error), i = toMsg(info);
+  if (!e && !i) return null;
   return (
-    <p style={{ color: error ? "#FF9AA6" : T.success, fontSize: 13, fontWeight: 700,
+    <p style={{ color: e ? "#FF9AA6" : T.success, fontSize: 13, fontWeight: 700,
       margin: "14px 0 0", textAlign: center ? "center" : "start", lineHeight: 1.45 }}>
-      {error || info}
+      {e || i}
     </p>
   );
 }
